@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏导览 - 热门游戏推荐</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes likePop {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+        
+        .card-animation {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .card-hidden {
+            opacity: 0;
+        }
+        
+        .like-animation {
+            animation: likePop 0.3s ease-out;
+        }
+        
+        .game-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .game-image {
+            transition: transform 0.4s ease;
+        }
+        
+        .game-card:hover .game-image {
+            transform: scale(1.1);
+        }
+        
+        .image-overlay {
+            transition: opacity 0.3s ease;
+        }
+        
+        .game-card:hover .image-overlay {
+            opacity: 1;
+        }
+        
+        .modal-enter {
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-black/50 backdrop-blur-md sticky top-0 z-50 border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-gamepad text-purple-400 text-3xl"></i>
+                    <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                        游戏导览
+                    </h1>
+                </div>
+                <div class="text-gray-400 text-sm hidden md:block">
+                    收录 100 款热门游戏
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search and Filter Section -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+            <!-- Search Box -->
+            <div class="relative flex-1">
+                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="搜索游戏名称..." 
+                    class="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                />
+            </div>
+            <!-- Sort Select -->
+            <select id="sortSelect" class="px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer">
+                <option value="rating">按评分排序</option>
+                <option value="name">按名称排序</option>
+            </select>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button 
+                class="filter-btn px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-sm font-medium transition-colors active" 
+                data-filter="all"
+            >
+                全部
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="RPG"
+            >
+                RPG
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="动作"
+            >
+                动作
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="独立"
+            >
+                独立
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="休闲"
+            >
+                休闲
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="策略"
+            >
+                策略
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="生存"
+            >
+                生存
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="竞速"
+            >
+                竞速
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="恐怖"
+            >
+                恐怖
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="模拟"
+            >
+                模拟
+            </button>
+            <button 
+                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
+                data-filter="射击"
+            >
+                射击
+            </button>
+        </div>
+
+        <!-- Results Count -->
+        <div class="text-gray-400 text-sm mb-4" id="resultsCount">
+            共 100 款游戏
+        </div>
+    </div>
+
+    <!-- Games Grid -->
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+        <div id="gamesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Games will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="gameModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden modal-enter">
+            <div class="relative">
+                <img id="modalImage" src="" alt="" class="w-full h-64 object-cover" />
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
+                <button id="closeModal" class="absolute top-4 right-4 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-4 left-4 right-4">
+                    <h2 id="modalTitle" class="text-2xl font-bold text-white"></h2>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span id="modalCategory" class="px-3 py-1 bg-purple-600 rounded-full text-sm text-white"></span>
+                        <span class="flex items-center gap-1 text-yellow-400">
+                            <i class="fa-solid fa-star"></i>
+                            <span id="modalRating"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-16rem)] scrollbar-hide">
+                <p id="modalDescription" class="text-gray-300 mb-4"></p>
+                <h3 class="text-white font-semibold mb-3">游戏特色</h3>
+                <ul id="modalFeatures" class="text-gray-400 space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-black/50 border-t border-white/10 py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
+            <p>游戏数据来源：Steam | 图片由 Steam CDN 提供</p>
+            <p class="mt-2">© 2024 游戏导览 - 发现精彩游戏</p>
+        </div>
+    </footer>
+
+    <script>
+        // Games Data
+        const gamesData = [
+            { id: 1, name: '艾尔登法环', category: 'RPG', rating: 4.9, steamId: 1245620, shortDesc: '魂系开放世界巅峰之作', features: ['开放世界探索', '魂系战斗系统', '史诗级Boss战', '丰富的武器装备'] },
+            { id: 2, name: '哈迪斯', category: '独立', rating: 4.9, steamId: 1145360, shortDesc: '暗黑风格Roguelike神作', features: ['Roguelike玩法', '爽快战斗', '丰富剧情', '精美美术'] },
+            { id: 3, name: '巫师3：狂猎', category: 'RPG', rating: 4.9, steamId: 292030, shortDesc: '史诗级黑暗奇幻RPG', features: ['开放世界', '剧情驱动', '昆特牌', '多结局'] },
+            { id: 4, name: '双人成行', category: '休闲', rating: 4.8, steamId: 1426210, shortDesc: '最佳双人合作游戏', features: ['双人合作', '创意关卡', '多样化玩法', '欢乐体验'] },
+            { id: 5, name: '星露谷物语', category: '休闲', rating: 4.9, steamId: 413150, shortDesc: '温馨治愈的农场模拟', features: ['农场经营', '社交系统', '季节变化', '轻松休闲'] },
+            { id: 6, name: '博德之门3', category: 'RPG', rating: 4.9, steamId: 1086940, shortDesc: 'CRPG天花板年度游戏', features: ['回合制战斗', '深度剧情', '角色养成', '多人合作'] },
+            { id: 7, name: '赛博朋克2077', category: 'RPG', rating: 4.7, steamId: 1091500, shortDesc: '夜之城传奇口碑逆袭', features: ['开放世界', '赛博朋克风格', '深度剧情', '角色扮演'] },
+            { id: 8, name: '荒野大镖客2', category: '动作', rating: 4.9, steamId: 1174180, shortDesc: '西部史诗细节无敌', features: ['开放世界', '西部题材', '高自由度', '精美画面'] },
+            { id: 9, name: '幻兽帕鲁', category: '生存', rating: 4.8, steamId: 1623730, shortDesc: '类宝可梦生存爆款', features: ['生物收集', '生存建造', '多人合作', '开放世界'] },
+            { id: 10, name: '雨中冒险2', category: '独立', rating: 4.8, steamId: 632360, shortDesc: '3D Roguelike射击爽游', features: ['Roguelike', '多人合作', '爽快射击', '丰富道具'] },
+            { id: 11, name: '潜水员戴夫', category: '休闲', rating: 4.9, steamId: 1868140, shortDesc: '海洋探险+寿司经营', features: ['海洋探险', '经营模拟', '独特玩法', '轻松有趣'] },
+            { id: 12, name: '传送门2', category: '解谜', rating: 4.9, steamId: 620, shortDesc: '史上最佳解谜游戏', features: ['创意解谜', '双人合作', '经典玩法', '幽默剧情'] },
+            { id: 13, name: '泰拉瑞亚', category: '生存', rating: 4.8, steamId: 105600, shortDesc: '2D沙盒神作内容海量', features: ['沙盒建造', '探索冒险', 'Boss挑战', '多人游戏'] },
+            { id: 14, name: '文明6', category: '策略', rating: 4.7, steamId: 289070, shortDesc: '精神时光屋策略神作', features: ['4X策略', '文明发展', '回合制', '深度玩法'] },
+            { id: 15, name: '欧洲卡车模拟2', category: '模拟', rating: 4.7, steamId: 227300, shortDesc: '放松神器卡车看风景', features: ['驾驶模拟', '欧洲地图', '经营元素', '休闲放松'] },
+            { id: 16, name: '消逝的光芒2', category: '动作', rating: 4.6, steamId: 534380, shortDesc: '跑酷+丧尸爽快', features: ['跑酷系统', '丧尸题材', '开放世界', '近战战斗'] },
+            { id: 17, name: '地铁：离去', category: '射击', rating: 4.7, steamId: 1444930, shortDesc: '末世生存沉浸感强', features: ['FPS射击', '末世题材', '生存元素', '剧情驱动'] },
+            { id: 18, name: '毁灭战士：永恒', category: '动作', rating: 4.8, steamId: 782330, shortDesc: 'FPS爽快天花板', features: ['极速射击', '恶魔猎杀', '暴力美学', '高难度'] },
+            { id: 19, name: '糖豆人', category: '休闲', rating: 4.6, steamId: 1496720, shortDesc: '多人派对吃鸡轻松', features: ['多人派对', '趣味闯关', '轻松娱乐', '派对游戏'] },
+            { id: 20, name: '人类一败涂地', category: '休闲', rating: 4.7, steamId: 477160, shortDesc: '沙雕物理解谜合作', features: ['物理解谜', '多人合作', '搞笑欢乐', '创意关卡'] },
+            { id: 21, name: '恐鬼症', category: '恐怖', rating: 4.7, steamId: 739630, shortDesc: '多人抓鬼直播神作', features: ['恐怖氛围', '多人合作', '幽灵狩猎', '沉浸式'] },
+            { id: 22, name: '盗贼之海', category: '冒险', rating: 4.6, steamId: 1172620, shortDesc: '海盗航海探索', features: ['海盗冒险', '航海模拟', '多人合作', '开放世界'] },
+            { id: 23, name: '地平线5', category: '竞速', rating: 4.8, steamId: 1551360, shortDesc: '赛车画质天花板', features: ['赛车竞速', '开放世界', '精美画面', '丰富车型'] },
+            { id: 24, name: '森林', category: '生存', rating: 4.7, steamId: 442080, shortDesc: '野人岛恐怖生存', features: ['生存建造', '恐怖元素', '开放世界', '多人模式'] },
+            { id: 25, name: '英灵神殿', category: '生存', rating: 4.8, steamId: 892970, shortDesc: '维京生存建造神作', features: ['维京题材', '生存建造', 'Boss战', '多人合作'] },
+            { id: 26, name: '腐蚀', category: '生存', rating: 4.6, steamId: 252490, shortDesc: '硬核多人生存', features: ['硬核生存', '多人PVP', '建造系统', '资源争夺'] },
+            { id: 27, name: '方舟：生存进化', category: '生存', rating: 4.6, steamId: 346110, shortDesc: '恐龙生存沙盒', features: ['恐龙驯服', '生存建造', '开放世界', '多人游戏'] },
+            { id: 28, name: '无人深空', category: '冒险', rating: 4.7, steamId: 275850, shortDesc: '宇宙探索翻身之作', features: ['宇宙探索', '无限星球', '建造系统', '更新频繁'] },
+            { id: 29, name: '吸血鬼幸存者', category: '独立', rating: 4.8, steamId: 1794680, shortDesc: '爽快割草神作', features: ['割草玩法', '极简操作', '丰富角色', '高可玩性'] },
+            { id: 30, name: '杀戮尖塔', category: '策略', rating: 4.8, steamId: 646570, shortDesc: 'Roguelike卡牌鼻祖', features: ['卡牌构筑', 'Roguelike', '策略深度', '多角色'] },
+            { id: 31, name: '以撒的结合', category: '独立', rating: 4.8, steamId: 250900, shortDesc: '肉鸽地牢射击', features: ['地牢探索', 'Roguelike', '丰富道具', '高难度'] },
+            { id: 32, name: '茶杯头', category: '动作', rating: 4.8, steamId: 268910, shortDesc: '复古卡通射击', features: ['复古画风', '硬核Boss', '双人合作', '音乐精美'] },
+            { id: 33, name: '空洞骑士', category: '动作', rating: 4.8, steamId: 367520, shortDesc: '手绘银河城', features: ['银河城', '手绘美术', '深度剧情', '高难度'] },
+            { id: 34, name: '死亡细胞', category: '独立', rating: 4.8, steamId: 588650, shortDesc: '高速动作肉鸽', features: ['高速战斗', 'Roguelike', '丰富武器', '流畅手感'] },
+            { id: 35, name: '蔚蓝', category: '平台', rating: 4.8, steamId: 504230, shortDesc: '高难平台跳跃', features: ['高难度', '平台跳跃', '剧情深刻', '音乐优秀'] },
+            { id: 36, name: '极乐迪斯科', category: 'RPG', rating: 4.8, steamId: 632470, shortDesc: '叙事RPG神作', features: ['文字冒险', '深度叙事', '独特画风', '角色塑造'] },
+            { id: 37, name: '神界原罪2', category: 'RPG', rating: 4.8, steamId: 435150, shortDesc: '回合制CRPG', features: ['回合制战斗', '多人合作', '深度剧情', '策略深度'] },
+            { id: 38, name: '骑马与砍杀2', category: '策略', rating: 4.7, steamId: 261550, shortDesc: '中世纪沙盒战争', features: ['中世纪', '战争模拟', '策略战斗', '沙盒玩法'] },
+            { id: 39, name: '全面战争三国', category: '策略', rating: 4.7, steamId: 779340, shortDesc: '三国全战史诗', features: ['三国题材', '全面战争', '策略深度', '精美画面'] },
+            { id: 40, name: '群星', category: '策略', rating: 4.7, steamId: 281990, shortDesc: '太空4X策略', features: ['太空探索', '4X策略', '帝国建设', '深度玩法'] },
+            { id: 41, name: '怪物猎人：世界', category: '动作', rating: 4.8, steamId: 582010, shortDesc: '共斗狩猎神作', features: ['共斗狩猎', '怪物生态', '武器多样', '多人合作'] },
+            { id: 42, name: '鬼泣5', category: '动作', rating: 4.8, steamId: 601150, shortDesc: '华丽连招动作', features: ['华丽战斗', '连招系统', '角色切换', '高爽快感'] },
+            { id: 43, name: '生化危机4重制版', category: '恐怖', rating: 4.8, steamId: 2050650, shortDesc: '恐怖游戏标杆', features: ['恐怖氛围', '射击战斗', '经典重制', '高画质'] },
+            { id: 44, name: '只狼', category: '动作', rating: 4.8, steamId: 814380, shortDesc: '忍者架势系统', features: ['架势系统', '忍者题材', '高难度', 'Boss战'] },
+            { id: 45, name: '黑暗之魂3', category: 'RPG', rating: 4.8, steamId: 374320, shortDesc: '魂系经典之作', features: ['魂系战斗', '高难度', '深度探索', '史诗Boss'] },
+            { id: 46, name: '仁王2', category: '动作', rating: 4.7, steamId: 1325200, shortDesc: '战国诛死游戏', features: ['战国题材', '魂系战斗', '妖怪设定', '丰富武器'] },
+            { id: 47, name: '卧龙：苍天陨落', category: '动作', rating: 4.6, steamId: 1448440, shortDesc: '三国暗黑动作', features: ['三国题材', '魂系战斗', '策略深度', '合作模式'] },
+            { id: 48, name: '匹诺曹的谎言', category: '动作', rating: 4.7, steamId: 1627720, shortDesc: '暗黑童话魂系', features: ['暗黑童话', '魂系战斗', '精美画面', '剧情深刻'] },
+            { id: 49, name: '遗迹2', category: '射击', rating: 4.7, steamId: 1282100, shortDesc: '射击肉鸽混搭', features: ['射击战斗', 'Roguelike', '多人合作', '丰富关卡'] },
+            { id: 50, name: '地狱潜者2', category: '射击', rating: 4.8, steamId: 553850, shortDesc: '多人合作射击', features: ['多人合作', '射击战斗', '爽快战斗', '科幻题材'] },
+            { id: 51, name: '战锤40K暗潮', category: '射击', rating: 4.6, steamId: 1361210, shortDesc: '鼠疫精神续作', features: ['战锤40K', '四人合作', '射击战斗', '暗黑风格'] },
+            { id: 52, name: '深岩银河', category: '射击', rating: 4.8, steamId: 548430, shortDesc: '矮人挖矿合作', features: ['四人合作', '挖矿探索', '射击战斗', '职业系统'] },
+            { id: 53, name: '求生之路2', category: '射击', rating: 4.8, steamId: 550, shortDesc: '经典丧尸合作', features: ['丧尸题材', '四人合作', '射击战斗', '经典地图'] },
+            { id: 54, name: '杀戮空间2', category: '射击', rating: 4.6, steamId: 232090, shortDesc: '爽快丧尸射击', features: ['丧尸射击', '多人合作', '波次生存', '职业系统'] },
+            { id: 55, name: '僵尸部队4', category: '射击', rating: 4.6, steamId: 694280, shortDesc: '狙击丧尸纳粹', features: ['狙击射击', '丧尸题材', '四人合作', '血腥爽快'] },
+            { id: 56, name: '狙击精英5', category: '射击', rating: 4.6, steamId: 1029690, shortDesc: 'X光击杀镜头', features: ['狙击游戏', 'X光击杀', '二战题材', '潜行元素'] },
+            { id: 57, name: '杀手3', category: '动作', rating: 4.7, steamId: 1659040, shortDesc: '暗杀沙盒神作', features: ['暗杀游戏', '沙盒关卡', '多种方案', '剧情连贯'] },
+            { id: 58, name: '耻辱2', category: '动作', rating: 4.7, steamId: 403640, shortDesc: '沉浸模拟潜行', features: ['潜行暗杀', '超能力', '选择影响', '精美关卡'] },
+            { id: 59, name: '掠食', category: '射击', rating: 4.7, steamId: 480490, shortDesc: '太空恐怖沉浸', features: ['太空题材', '恐怖元素', 'RPG元素', '剧情深刻'] },
+            { id: 60, name: '死亡循环', category: '动作', rating: 4.7, steamId: 1252330, shortDesc: '时间循环创新', features: ['时间循环', '射击战斗', '独特玩法', '精美画面'] },
+            { id: 61, name: '红霞岛', category: '射击', rating: 4.3, steamId: 1294810, shortDesc: '开放世界合作', features: ['开放世界', '吸血鬼题材', '多人合作', '射击战斗'] },
+            { id: 62, name: '幽灵线东京', category: '动作', rating: 4.5, steamId: 1475810, shortDesc: '日式除灵动作', features: ['日式恐怖', '除灵题材', '动作战斗', '东京场景'] },
+            { id: 63, name: '恶灵附身2', category: '恐怖', rating: 4.6, steamId: 601430, shortDesc: '三上真司恐怖', features: ['生存恐怖', '三上真司', '心理恐怖', '战斗系统'] },
+            { id: 64, name: '逃生2', category: '恐怖', rating: 4.6, steamId: 414700, shortDesc: '第一人称跑酷', features: ['生存恐怖', '无战斗', '跑酷逃生', '恐怖氛围'] },
+            { id: 65, name: '港诡实录', category: '恐怖', rating: 4.5, steamId: 1178490, shortDesc: '中式恐怖经典', features: ['中式恐怖', '香港都市传说', '解谜元素', '沉浸式'] },
+            { id: 66, name: '纸人', category: '恐怖', rating: 4.5, steamId: 1042390, shortDesc: '清朝中式恐怖', features: ['清朝背景', '中式恐怖', '解谜探索', '恐怖氛围'] },
+            { id: 67, name: '烟火', category: '恐怖', rating: 4.7, steamId: 1024600, shortDesc: '横版中式恐怖', features: ['横版解谜', '中式恐怖', '剧情深刻', '像素风格'] },
+            { id: 68, name: '三伏', category: '恐怖', rating: 4.7, steamId: 1991790, shortDesc: '国产剧情神作', features: ['中式恐怖', '悬疑剧情', '解谜探索', '精美画面'] },
+            { id: 69, name: '戴森球计划', category: '策略', rating: 4.8, steamId: 1366540, shortDesc: '国产自动化神作', features: ['自动化建设', '太空题材', '资源管理', '国产精品'] },
+            { id: 70, name: '鬼谷八荒', category: 'RPG', rating: 4.6, steamId: 1468810, shortDesc: '修仙开放世界', features: ['修仙题材', '开放世界', '角色养成', '国产游戏'] },
+            { id: 71, name: '太吾绘卷', category: 'RPG', rating: 4.6, steamId: 838350, shortDesc: '国产武侠神作', features: ['武侠题材', '沙盒玩法', '独特机制', '国产精品'] },
+            { id: 72, name: '山河旅人', category: '冒险', rating: 4.7, steamId: 2024340, shortDesc: '国风叙事解谜', features: ['国风美术', '叙事解谜', '时间回溯', '情感体验'] },
+            { id: 73, name: '暗黑地牢2', category: '策略', rating: 4.7, steamId: 1940340, shortDesc: '压抑肉鸽探险', features: ['暗黑风格', 'Roguelike', '策略战斗', '压力系统'] },
+            { id: 74, name: '孤帆远航', category: '冒险', rating: 4.7, steamId: 1271100, shortDesc: '末日氛围神作', features: ['末日氛围', '探索冒险', '极简叙事', '精美画面'] },
+            { id: 75, name: '格里姆黎明', category: 'RPG', rating: 4.7, steamId: 219990, shortDesc: '暗黑类ARPG', features: ['暗黑风格', 'ARPG', '职业组合', '刷宝玩法'] },
+            { id: 76, name: '恐怖黎明', category: 'RPG', rating: 4.7, steamId: 219990, shortDesc: '刷刷刷暗黑风', features: ['暗黑风格', 'ARPG', '丰富装备', '刷宝体验'] },
+            { id: 77, name: '最后纪元', category: 'RPG', rating: 4.7, steamId: 899770, shortDesc: '时空穿越刷宝', features: ['ARPG', '时空题材', '技能系统', '刷宝玩法'] },
+            { id: 78, name: '破坏领主', category: 'RPG', rating: 4.5, steamId: 78710, shortDesc: '画面优秀暗黑', features: ['暗黑风格', 'ARPG', '精美画面', '战斗系统'] },
+            { id: 79, name: '维克多弗兰', category: 'RPG', rating: 4.5, steamId: 345180, shortDesc: '爽快俯视射击', features: ['俯视射击', 'ARPG', '武器组合', '爽快战斗'] },
+            { id: 80, name: '火炬之光2', category: 'RPG', rating: 4.7, steamId: 200710, shortDesc: '经典卡通暗黑', features: ['卡通风格', 'ARPG', '多人联机', '刷宝玩法'] },
+            { id: 81, name: '战锤末世鼠疫2', category: '动作', rating: 4.7, steamId: 552500, shortDesc: '四人合作割草', features: ['战锤题材', '四人合作', '割草战斗', '职业系统'] },
+            { id: 82, name: '骑士精神2', category: '动作', rating: 4.6, steamId: 1341370, shortDesc: '中世纪砍杀', features: ['中世纪', '多人对战', '冷兵器', '大规模战斗'] },
+            { id: 83, name: '雷霆一击', category: '动作', rating: 4.6, steamId: 866360, shortDesc: '硬核中世纪', features: ['硬核战斗', '中世纪', '冷兵器', '策略元素'] },
+            { id: 84, name: '叛乱：沙尘暴', category: '射击', rating: 4.7, steamId: 581320, shortDesc: '硬核拟真射击', features: ['拟真射击', '战术团队', '硬核难度', '中东题材'] },
+            { id: 85, name: '人间地狱', category: '射击', rating: 4.7, steamId: 686160, shortDesc: '二战硬核战术', features: ['二战题材', '硬核射击', '团队战术', '大规模战斗'] },
+            { id: 86, name: '风之旅人', category: '冒险', rating: 4.8, steamId: 638230, shortDesc: '唯美治愈神作', features: ['唯美画面', '治愈体验', '多人相遇', '音乐优秀'] },
+            { id: 87, name: '光之子', category: 'RPG', rating: 4.7, steamId: 256290, shortDesc: '童话手绘回合', features: ['手绘美术', '童话题材', '回合制', '音乐精美'] },
+            { id: 88, name: '奥日与迷失森林', category: '平台', rating: 4.8, steamId: 261570, shortDesc: '手绘音乐神作', features: ['手绘美术', '平台跳跃', '音乐优秀', '情感故事'] },
+            { id: 89, name: '奥日与精灵意志', category: '平台', rating: 4.8, steamId: 1057090, shortDesc: '续作全面进化', features: ['平台跳跃', '战斗系统', '精美画面', '音乐优秀'] },
+            { id: 90, name: '精灵与萤火意志', category: '平台', rating: 4.8, steamId: 1057090, shortDesc: '绝美银河城', features: ['银河城', '精美画面', '战斗系统', '探索元素'] },
+            { id: 91, name: '咖啡心语', category: '模拟', rating: 4.7, steamId: 914800, shortDesc: '赛博朋克咖啡', features: ['经营模拟', '赛博朋克', '叙事体验', '轻松休闲'] },
+            { id: 92, name: '赛博朋克酒保', category: '模拟', rating: 4.7, steamId: 914800, shortDesc: '调酒叙事游戏', features: ['调酒模拟', '叙事体验', '角色互动', '独特设定'] },
+            { id: 93, name: '奇异园艺', category: '解谜', rating: 4.7, steamId: 1124080, shortDesc: '超自然解谜', features: ['解谜探索', '超自然元素', '收集系统', '剧情驱动'] },
+            { id: 94, name: '奥伯拉丁回归', category: '解谜', rating: 4.8, steamId: 503420, shortDesc: '推理神作', features: ['推理解谜', '独特画风', '剧情深刻', '侦探玩法'] },
+            { id: 95, name: '证人', category: '解谜', rating: 4.7, steamId: 210970, shortDesc: '开放世界解谜', features: ['开放世界', '解谜探索', '视觉谜题', '精美画面'] },
+            { id: 96, name: '画中世界', category: '解谜', rating: 4.8, steamId: 490770, shortDesc: '创意拼图解谜', features: ['拼图玩法', '创意解谜', '精美美术', '独特体验'] },
+            { id: 97, name: '接龙', category: '休闲', rating: 4.6, steamId: 1593500, shortDesc: '轻松扑克接龙', features: ['休闲益智', '扑克游戏', '轻松上手', '打发时间'] },
+            { id: 98, name: '潜水员戴夫DLC', category: '休闲', rating: 4.9, steamId: 1868140, shortDesc: '免费内容更新', features: ['免费DLC', '新内容', '海洋探险', '持续更新'] },
+            { id: 99, name: '吸血鬼崛起', category: '生存', rating: 4.7, steamId: 1604030, shortDesc: '吸血鬼生存建设', features: ['吸血鬼题材', '生存建造', '多人合作', '开放世界'] },
+            { id: 100, name: '夜族崛起', category: '生存', rating: 4.7, steamId: 1604030, shortDesc: '吸血鬼动作RPG', features: ['吸血鬼题材', '动作战斗', '生存建造', '开放世界'] }
+        ];
+
+        // DOM Elements
+        const gamesGrid = document.getElementById('gamesGrid');
+        const searchInput = document.getElementById('searchInput');
+        const sortSelect = document.getElementById('sortSelect');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const resultsCount = document.getElementById('resultsCount');
+        const gameModal = document.getElementById('gameModal');
+        const closeModal = document.getElementById('closeModal');
+
+        // State
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let currentSort = 'rating';
+
+        // Get image URL
+        function getGameImageUrl(steamId) {
+            return `https://images.weserv.nl/?url=steamcdn-a.akamaihd.net/steam/apps/${steamId}/header.jpg`;
+        }
+
+        // Load likes from localStorage
+        function getLikes() {
+            const likes = localStorage.getItem('gameLikes');
+            return likes ? JSON.parse(likes) : {};
+        }
+
+        // Save likes to localStorage
+        function saveLikes(likes) {
+            localStorage.setItem('gameLikes', JSON.stringify(likes));
+        }
+
+        // Toggle like
+        function toggleLike(gameId, button) {
+            const likes = getLikes();
+            if (likes[gameId]) {
+                likes[gameId]++;
+            } else {
+                likes[gameId] = 1;
+            }
+            saveLikes(likes);
+            
+            const likeIcon = button.querySelector('.like-icon');
+            likeIcon.classList.add('like-animation');
+            setTimeout(() => likeIcon.classList.remove('like-animation'), 300);
+            
+            updateLikeButton(button, likes[gameId]);
+        }
+
+        // Update like button
+        function updateLikeButton(button, count) {
+            button.querySelector('.like-count').textContent = count;
+            button.classList.add('bg-red-500');
+            button.classList.remove('bg-white/10');
+        }
+
+        // Create game card
+        function createGameCard(game) {
+            const likes = getLikes();
+            const card = document.createElement('div');
+            card.className = 'game-card bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md rounded-xl overflow-hidden border border-white/10 card-hidden';
+            card.innerHTML = `
+                <div class="relative h-48 overflow-hidden">
+                    <img 
+                        src="${getGameImageUrl(game.steamId)}" 
+                        alt="${game.name}" 
+                        class="game-image w-full h-full object-cover"
+                        onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-image').style.display='flex';"
+                    />
+                    <div class="fallback-image hidden absolute inset-0 bg-gradient-to-br from-purple-600 to-gray-700 flex items-center justify-center">
+                        <span class="text-white text-2xl font-bold text-center px-2">${game.name}</span>
+                    </div>
+                    <div class="image-overlay absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0"></div>
+                    <span class="absolute top-3 left-3 px-2 py-1 bg-purple-600 rounded text-xs text-white font-medium">${game.category}</span>
+                    <div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-black/60 rounded-full">
+                        <i class="fa-solid fa-star text-yellow-400 text-xs"></i>
+                        <span class="text-white text-xs font-medium">${game.rating}</span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-white font-semibold mb-2 truncate">${game.name}</h3>
+                    <p class="text-gray-400 text-sm mb-4 line-clamp-2">${game.shortDesc}</p>
+                    <button 
+                        class="like-btn flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+                        onclick="toggleLike(${game.id}, this)"
+                    >
+                        <i class="fa-solid fa-heart like-icon"></i>
+                        <span class="like-count">${likes[game.id] || 0}</span>
+                    </button>
+                </div>
+            `;
+            
+            // Open modal on card click
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.like-btn')) {
+                    openModal(game);
+                }
+            });
+
+            // Initialize like button state
+            const likeBtn = card.querySelector('.like-btn');
+            if (likes[game.id]) {
+                updateLikeButton(likeBtn, likes[game.id]);
+            }
+
+            return card;
+        }
+
+        // Open modal
+        function openModal(game) {
+            document.getElementById('modalImage').src = getGameImageUrl(game.steamId);
+            document.getElementById('modalTitle').textContent = game.name;
+            document.getElementById('modalCategory').textContent = game.category;
+            document.getElementById('modalRating').textContent = game.rating;
+            document.getElementById('modalDescription').textContent = game.shortDesc;
+            
+            const featuresList = document.getElementById('modalFeatures');
+            featuresList.innerHTML = '';
+            game.features.forEach(feature => {
+                const li = document.createElement('li');
+                li.innerHTML = `<i class="fa-solid fa-check text-purple-400 mr-2"></i>${feature}`;
+                featuresList.appendChild(li);
+            });
+            
+            gameModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            gameModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        });
+
+        // Close modal on overlay click
+        gameModal.addEventListener('click', (e) => {
+            if (e.target === gameModal) {
+                gameModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Filter and sort games
+        function filterAndSortGames() {
+            let filtered = [...gamesData];
+            
+            // Search filter
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(game => game.name.toLowerCase().includes(searchLower));
+            }
+            
+            // Category filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(game => game.category === currentFilter);
+            }
+            
+            // Sort
+            if (currentSort === 'rating') {
+                filtered.sort((a, b) => b.rating - a.rating);
+            } else {
+                filtered.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            return filtered;
+        }
+
+        // Render games
+        function renderGames() {
+            const filteredGames = filterAndSortGames();
+            resultsCount.textContent = `共 ${filteredGames.length} 款游戏`;
+            
+            // Clear grid
+            gamesGrid.innerHTML = '';
+            
+            // Add cards with animation delay
+            filteredGames.forEach((game, index) => {
+                const card = createGameCard(game);
+                card.style.animationDelay = `${index * 50}ms`;
+                setTimeout(() => {
+                    card.classList.remove('card-hidden');
+                }, index * 50);
+                gamesGrid.appendChild(card);
+            });
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            renderGames();
+        });
+
+        sortSelect.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderGames();
+        });
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active state
+                filterButtons.forEach(b => b.classList.remove('bg-purple-600', 'active'));
+                btn.classList.add('bg-purple-600', 'active');
+                
+                currentFilter = btn.dataset.filter;
+                renderGames();
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !gameModal.classList.contains('hidden')) {
+                gameModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Initial render
+        renderGames();
+    </script>
+</body>
+</html>
