@@ -7,74 +7,143 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* ===== 动画关键帧 ===== */
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
         @keyframes likePop {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.3); }
         }
-        
-        .card-animation {
-            animation: fadeInUp 0.6s ease-out forwards;
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
         }
-        
-        .card-hidden {
-            opacity: 0;
+        @keyframes progressBar {
+            from { width: 0%; }
         }
-        
-        .like-animation {
-            animation: likePop 0.3s ease-out;
+        @keyframes toastFade {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
         }
-        
+
+        /* ===== 基础样式 ===== */
+        .card-animation { animation: fadeInUp 0.6s ease-out forwards; }
+        .card-hidden { opacity: 0; }
+        .like-animation { animation: likePop 0.3s ease-out; }
+        .toast-animation { animation: toastFade 2.5s ease-out forwards; }
+
+        /* ===== 卡片交互 ===== */
         .game-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        
         .game-card:hover {
             transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
-        
+        .game-image-wrapper {
+            overflow: hidden;
+            cursor: pointer;
+        }
         .game-image {
             transition: transform 0.4s ease;
         }
-        
         .game-card:hover .game-image {
             transform: scale(1.1);
         }
-        
         .image-overlay {
+            opacity: 0;
             transition: opacity 0.3s ease;
         }
-        
         .game-card:hover .image-overlay {
             opacity: 1;
         }
-        
-        .modal-enter {
-            animation: fadeInUp 0.3s ease-out;
+
+        /* ===== 滚动条 ===== */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ===== 模态框 ===== */
+        .modal-enter { animation: fadeInUp 0.3s ease-out; }
+        .lightbox-enter { animation: fadeInUp 0.3s ease-out; }
+
+        /* ===== 进度条 ===== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #9333ea, #ec4899);
+            z-index: 9999;
+            transition: width 0.1s ease;
         }
-        
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
+
+        /* ===== 返回顶部按钮 ===== */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
         }
-        
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(147, 51, 234, 0.6);
+        }
+
+        /* ===== Toast 提示 ===== */
+        .toast {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #9333ea, #ec4899);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+        }
+
+        /* ===== 留言卡片 ===== */
+        .comment-card {
+            animation: slideInRight 0.4s ease-out;
+        }
+
+        /* ===== 简历模态框 ===== */
+        .resume-modal {
+            max-width: 600px;
+        }
+
+        /* ===== 懒加载占位 ===== */
+        .lazy-image {
+            background: linear-gradient(135deg, #374151, #4b5563);
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen">
+    <!-- 阅读进度条 -->
+    <div class="progress-bar" id="progressBar"></div>
+
     <!-- Header -->
     <header class="bg-black/50 backdrop-blur-md sticky top-0 z-50 border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 py-4">
@@ -85,8 +154,23 @@
                         游戏导览
                     </h1>
                 </div>
-                <div class="text-gray-400 text-sm hidden md:block">
-                    收录 100 款热门游戏
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-400 text-sm hidden md:block">收录 100 款热门游戏</span>
+                    <!-- 分享按钮 -->
+                    <button id="shareBtn" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span class="hidden sm:inline">分享</span>
+                    </button>
+                    <!-- 关于站长按钮 -->
+                    <button id="aboutBtn" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="hidden sm:inline">关于站长</span>
+                    </button>
+                    <!-- 个人简历按钮 -->
+                    <a href="个人简历.pdf" target="_blank" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span class="hidden sm:inline">个人简历</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -114,88 +198,79 @@
 
         <!-- Category Filters -->
         <div class="flex flex-wrap gap-2 mb-6">
-            <button 
-                class="filter-btn px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-sm font-medium transition-colors active" 
-                data-filter="all"
-            >
-                全部
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="RPG"
-            >
-                RPG
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="动作"
-            >
-                动作
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="独立"
-            >
-                独立
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="休闲"
-            >
-                休闲
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="策略"
-            >
-                策略
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="生存"
-            >
-                生存
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="竞速"
-            >
-                竞速
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="恐怖"
-            >
-                恐怖
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="模拟"
-            >
-                模拟
-            </button>
-            <button 
-                class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" 
-                data-filter="射击"
-            >
-                射击
-            </button>
+            <button class="filter-btn px-4 py-2 bg-purple-600 text-white rounded-full text-sm font-medium transition-colors active" data-filter="all">全部</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="RPG">RPG</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="动作">动作</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="独立">独立</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="休闲">休闲</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="策略">策略</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="生存">生存</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="竞速">竞速</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="恐怖">恐怖</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="模拟">模拟</button>
+            <button class="filter-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors" data-filter="射击">射击</button>
         </div>
 
         <!-- Results Count -->
-        <div class="text-gray-400 text-sm mb-4" id="resultsCount">
-            共 100 款游戏
-        </div>
+        <div class="text-gray-400 text-sm mb-4" id="resultsCount">共 100 款游戏</div>
     </div>
 
     <!-- Games Grid -->
     <div class="max-w-7xl mx-auto px-4 pb-12">
-        <div id="gamesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <!-- Games will be inserted here -->
+        <div id="gamesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+    </div>
+
+    <!-- 留言板区域 -->
+    <div class="max-w-7xl mx-auto px-4 pb-12" id="commentSection">
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                <i class="fa-solid fa-comments text-purple-400"></i>
+                留言板
+                <span class="text-sm font-normal text-gray-400" id="commentCount">0 条留言</span>
+            </h2>
+
+            <!-- 留言表单 -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <input 
+                    type="text" 
+                    id="commentName" 
+                    placeholder="你的昵称" 
+                    maxlength="20"
+                    class="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                />
+                <input 
+                    type="text" 
+                    id="commentContent" 
+                    placeholder="说点什么吧..." 
+                    maxlength="200"
+                    class="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                />
+                <button id="submitComment" class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-medium transition-colors flex items-center gap-2 justify-center">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    提交
+                </button>
+            </div>
+
+            <!-- 留言列表 -->
+            <div id="commentList" class="space-y-4"></div>
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Footer -->
+    <footer class="bg-black/50 border-t border-white/10 py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
+            <p>游戏数据来源：Steam | 图片由 Steam CDN 提供</p>
+            <p class="mt-2">
+                <a href="个人简历.pdf" target="_blank" class="text-purple-400 hover:text-purple-300 transition-colors flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    下载个人简历
+                </a>
+            </p>
+            <p class="mt-2">© 2024 游戏导览 - 发现精彩游戏</p>
+        </div>
+    </footer>
+
+    <!-- 游戏详情模态框 -->
     <div id="gameModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden modal-enter">
             <div class="relative">
@@ -223,16 +298,118 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-black/50 border-t border-white/10 py-6">
-        <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
-            <p>游戏数据来源：Steam | 图片由 Steam CDN 提供</p>
-            <p class="mt-2">© 2024 游戏导览 - 发现精彩游戏</p>
+    <!-- 图片放大查看 (Lightbox) -->
+    <div id="lightbox" class="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center hidden">
+        <button id="closeLightbox" class="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-2xl transition-colors z-10">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <button id="prevImage" class="absolute left-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-2xl transition-colors">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button id="nextImage" class="absolute right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-2xl transition-colors">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <div class="max-w-5xl max-h-[85vh] p-4">
+            <img id="lightboxImage" src="" alt="" class="max-w-full max-h-[85vh] object-contain lightbox-enter" />
         </div>
-    </footer>
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 text-sm">
+            <span id="imageCounter">1 / 1</span>
+        </div>
+    </div>
+
+    <!-- 关于站长模态框 -->
+    <div id="aboutModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden modal-enter resume-modal">
+            <div class="p-8 overflow-y-auto max-h-[90vh] scrollbar-hide">
+                <!-- 头像和昵称 -->
+                <div class="text-center mb-6">
+                    <div class="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-4xl mb-4">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white">游戏导览站长</h2>
+                    <p class="text-gray-400 mt-2">热爱游戏的玩家 / 独立开发者</p>
+                </div>
+
+                <!-- 个人介绍 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-address-card text-purple-400"></i>
+                        个人介绍
+                    </h3>
+                    <p class="text-gray-300 leading-relaxed">
+                        资深游戏爱好者，从红白机时代开始游戏之旅。致力于发现和分享优质游戏，已收录超过100款精品游戏。
+                        喜欢RPG的剧情、独立游戏的创意、竞技游戏的热血。希望能帮助更多玩家找到属于自己的游戏乐趣。
+                    </p>
+                </div>
+
+                <!-- 技能标签 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-code text-purple-400"></i>
+                        技能标签
+                    </h3>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-purple-600/30 text-purple-300 rounded-full text-sm">游戏评测</span>
+                        <span class="px-3 py-1 bg-blue-600/30 text-blue-300 rounded-full text-sm">前端开发</span>
+                        <span class="px-3 py-1 bg-green-600/30 text-green-300 rounded-full text-sm">内容创作</span>
+                        <span class="px-3 py-1 bg-yellow-600/30 text-yellow-300 rounded-full text-sm">游戏攻略</span>
+                        <span class="px-3 py-1 bg-pink-600/30 text-pink-300 rounded-full text-sm">社区运营</span>
+                    </div>
+                </div>
+
+                <!-- 项目经历 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-briefcase text-purple-400"></i>
+                        项目经历
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="bg-white/5 rounded-lg p-3">
+                            <h4 class="text-white font-medium">游戏导览网站</h4>
+                            <p class="text-gray-400 text-sm mt-1">独立开发的游戏推荐平台，收录100+精品游戏，支持分类筛选、评论互动等功能</p>
+                        </div>
+                        <div class="bg-white/5 rounded-lg p-3">
+                            <h4 class="text-white font-medium">游戏攻略社区</h4>
+                            <p class="text-gray-400 text-sm mt-1">玩家攻略分享平台，提供游戏评测、攻略教程等内容</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 联系方式 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-envelope text-purple-400"></i>
+                        联系方式
+                    </h3>
+                    <div class="space-y-2">
+                        <a href="#" class="flex items-center gap-3 text-gray-300 hover:text-purple-400 transition-colors">
+                            <i class="fa-solid fa-envelope w-5"></i>
+                            gamer@explorer.com
+                        </a>
+                        <a href="#" class="flex items-center gap-3 text-gray-300 hover:text-purple-400 transition-colors">
+                            <i class="fa-brands fa-github w-5"></i>
+                            github.com/gamer-explorer
+                        </a>
+                    </div>
+                </div>
+
+                <button id="closeAbout" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-medium transition-colors">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 返回顶部按钮 -->
+    <div id="backToTop" class="back-to-top">
+        <i class="fa-solid fa-arrow-up text-white text-lg"></i>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast hidden"></div>
 
     <script>
-        // Games Data
+        // ===== 游戏数据 (100款) =====
         const gamesData = [
             { id: 1, name: '艾尔登法环', category: 'RPG', rating: 4.9, steamId: 1245620, shortDesc: '魂系开放世界巅峰之作', features: ['开放世界探索', '魂系战斗系统', '史诗级Boss战', '丰富的武器装备'] },
             { id: 2, name: '哈迪斯', category: '独立', rating: 4.9, steamId: 1145360, shortDesc: '暗黑风格Roguelike神作', features: ['Roguelike玩法', '爽快战斗', '丰富剧情', '精美美术'] },
@@ -245,7 +422,7 @@
             { id: 9, name: '幻兽帕鲁', category: '生存', rating: 4.8, steamId: 1623730, shortDesc: '类宝可梦生存爆款', features: ['生物收集', '生存建造', '多人合作', '开放世界'] },
             { id: 10, name: '雨中冒险2', category: '独立', rating: 4.8, steamId: 632360, shortDesc: '3D Roguelike射击爽游', features: ['Roguelike', '多人合作', '爽快射击', '丰富道具'] },
             { id: 11, name: '潜水员戴夫', category: '休闲', rating: 4.9, steamId: 1868140, shortDesc: '海洋探险+寿司经营', features: ['海洋探险', '经营模拟', '独特玩法', '轻松有趣'] },
-            { id: 12, name: '传送门2', category: '解谜', rating: 4.9, steamId: 620, shortDesc: '史上最佳解谜游戏', features: ['创意解谜', '双人合作', '经典玩法', '幽默剧情'] },
+            { id: 12, name: '传送门2', category: '独立', rating: 4.9, steamId: 620, shortDesc: '史上最佳解谜游戏', features: ['创意解谜', '双人合作', '经典玩法', '幽默剧情'] },
             { id: 13, name: '泰拉瑞亚', category: '生存', rating: 4.8, steamId: 105600, shortDesc: '2D沙盒神作内容海量', features: ['沙盒建造', '探索冒险', 'Boss挑战', '多人游戏'] },
             { id: 14, name: '文明6', category: '策略', rating: 4.7, steamId: 289070, shortDesc: '精神时光屋策略神作', features: ['4X策略', '文明发展', '回合制', '深度玩法'] },
             { id: 15, name: '欧洲卡车模拟2', category: '模拟', rating: 4.7, steamId: 227300, shortDesc: '放松神器卡车看风景', features: ['驾驶模拟', '欧洲地图', '经营元素', '休闲放松'] },
@@ -255,261 +432,334 @@
             { id: 19, name: '糖豆人', category: '休闲', rating: 4.6, steamId: 1496720, shortDesc: '多人派对吃鸡轻松', features: ['多人派对', '趣味闯关', '轻松娱乐', '派对游戏'] },
             { id: 20, name: '人类一败涂地', category: '休闲', rating: 4.7, steamId: 477160, shortDesc: '沙雕物理解谜合作', features: ['物理解谜', '多人合作', '搞笑欢乐', '创意关卡'] },
             { id: 21, name: '恐鬼症', category: '恐怖', rating: 4.7, steamId: 739630, shortDesc: '多人抓鬼直播神作', features: ['恐怖氛围', '多人合作', '幽灵狩猎', '沉浸式'] },
-            { id: 22, name: '盗贼之海', category: '冒险', rating: 4.6, steamId: 1172620, shortDesc: '海盗航海探索', features: ['海盗冒险', '航海模拟', '多人合作', '开放世界'] },
-            { id: 23, name: '地平线5', category: '竞速', rating: 4.8, steamId: 1551360, shortDesc: '赛车画质天花板', features: ['赛车竞速', '开放世界', '精美画面', '丰富车型'] },
+            { id: 22, name: '盗贼之海', category: '动作', rating: 4.6, steamId: 1172620, shortDesc: '海盗航海探索', features: ['海盗冒险', '航海模拟', '多人合作', '开放世界'] },
+            { id: 23, name: '极限竞速：地平线5', category: '竞速', rating: 4.8, steamId: 1551360, shortDesc: '赛车画质天花板', features: ['赛车竞速', '开放世界', '精美画面', '丰富车型'] },
             { id: 24, name: '森林', category: '生存', rating: 4.7, steamId: 442080, shortDesc: '野人岛恐怖生存', features: ['生存建造', '恐怖元素', '开放世界', '多人模式'] },
             { id: 25, name: '英灵神殿', category: '生存', rating: 4.8, steamId: 892970, shortDesc: '维京生存建造神作', features: ['维京题材', '生存建造', 'Boss战', '多人合作'] },
             { id: 26, name: '腐蚀', category: '生存', rating: 4.6, steamId: 252490, shortDesc: '硬核多人生存', features: ['硬核生存', '多人PVP', '建造系统', '资源争夺'] },
             { id: 27, name: '方舟：生存进化', category: '生存', rating: 4.6, steamId: 346110, shortDesc: '恐龙生存沙盒', features: ['恐龙驯服', '生存建造', '开放世界', '多人游戏'] },
-            { id: 28, name: '无人深空', category: '冒险', rating: 4.7, steamId: 275850, shortDesc: '宇宙探索翻身之作', features: ['宇宙探索', '无限星球', '建造系统', '更新频繁'] },
+            { id: 28, name: '无人深空', category: '独立', rating: 4.7, steamId: 275850, shortDesc: '宇宙探索翻身之作', features: ['宇宙探索', '无限星球', '建造系统', '更新频繁'] },
             { id: 29, name: '吸血鬼幸存者', category: '独立', rating: 4.8, steamId: 1794680, shortDesc: '爽快割草神作', features: ['割草玩法', '极简操作', '丰富角色', '高可玩性'] },
             { id: 30, name: '杀戮尖塔', category: '策略', rating: 4.8, steamId: 646570, shortDesc: 'Roguelike卡牌鼻祖', features: ['卡牌构筑', 'Roguelike', '策略深度', '多角色'] },
             { id: 31, name: '以撒的结合', category: '独立', rating: 4.8, steamId: 250900, shortDesc: '肉鸽地牢射击', features: ['地牢探索', 'Roguelike', '丰富道具', '高难度'] },
             { id: 32, name: '茶杯头', category: '动作', rating: 4.8, steamId: 268910, shortDesc: '复古卡通射击', features: ['复古画风', '硬核Boss', '双人合作', '音乐精美'] },
             { id: 33, name: '空洞骑士', category: '动作', rating: 4.8, steamId: 367520, shortDesc: '手绘银河城', features: ['银河城', '手绘美术', '深度剧情', '高难度'] },
             { id: 34, name: '死亡细胞', category: '独立', rating: 4.8, steamId: 588650, shortDesc: '高速动作肉鸽', features: ['高速战斗', 'Roguelike', '丰富武器', '流畅手感'] },
-            { id: 35, name: '蔚蓝', category: '平台', rating: 4.8, steamId: 504230, shortDesc: '高难平台跳跃', features: ['高难度', '平台跳跃', '剧情深刻', '音乐优秀'] },
+            { id: 35, name: '蔚蓝', category: '动作', rating: 4.8, steamId: 504230, shortDesc: '高难平台跳跃', features: ['高难度', '平台跳跃', '剧情深刻', '音乐优秀'] },
             { id: 36, name: '极乐迪斯科', category: 'RPG', rating: 4.8, steamId: 632470, shortDesc: '叙事RPG神作', features: ['文字冒险', '深度叙事', '独特画风', '角色塑造'] },
             { id: 37, name: '神界原罪2', category: 'RPG', rating: 4.8, steamId: 435150, shortDesc: '回合制CRPG', features: ['回合制战斗', '多人合作', '深度剧情', '策略深度'] },
             { id: 38, name: '骑马与砍杀2', category: '策略', rating: 4.7, steamId: 261550, shortDesc: '中世纪沙盒战争', features: ['中世纪', '战争模拟', '策略战斗', '沙盒玩法'] },
-            { id: 39, name: '全面战争三国', category: '策略', rating: 4.7, steamId: 779340, shortDesc: '三国全战史诗', features: ['三国题材', '全面战争', '策略深度', '精美画面'] },
+            { id: 39, name: '全面战争：三国', category: '策略', rating: 4.7, steamId: 779340, shortDesc: '三国全战史诗', features: ['三国题材', '全面战争', '策略深度', '精美画面'] },
             { id: 40, name: '群星', category: '策略', rating: 4.7, steamId: 281990, shortDesc: '太空4X策略', features: ['太空探索', '4X策略', '帝国建设', '深度玩法'] },
             { id: 41, name: '怪物猎人：世界', category: '动作', rating: 4.8, steamId: 582010, shortDesc: '共斗狩猎神作', features: ['共斗狩猎', '怪物生态', '武器多样', '多人合作'] },
             { id: 42, name: '鬼泣5', category: '动作', rating: 4.8, steamId: 601150, shortDesc: '华丽连招动作', features: ['华丽战斗', '连招系统', '角色切换', '高爽快感'] },
-            { id: 43, name: '生化危机4重制版', category: '恐怖', rating: 4.8, steamId: 2050650, shortDesc: '恐怖游戏标杆', features: ['恐怖氛围', '射击战斗', '经典重制', '高画质'] },
-            { id: 44, name: '只狼', category: '动作', rating: 4.8, steamId: 814380, shortDesc: '忍者架势系统', features: ['架势系统', '忍者题材', '高难度', 'Boss战'] },
+            { id: 43, name: '生化危机4：重制版', category: '恐怖', rating: 4.8, steamId: 2050650, shortDesc: '恐怖游戏标杆', features: ['恐怖氛围', '射击战斗', '经典重制', '高画质'] },
+            { id: 44, name: '只狼：影逝二度', category: '动作', rating: 4.8, steamId: 814380, shortDesc: '忍者架势系统', features: ['架势系统', '忍者题材', '高难度', 'Boss战'] },
             { id: 45, name: '黑暗之魂3', category: 'RPG', rating: 4.8, steamId: 374320, shortDesc: '魂系经典之作', features: ['魂系战斗', '高难度', '深度探索', '史诗Boss'] },
             { id: 46, name: '仁王2', category: '动作', rating: 4.7, steamId: 1325200, shortDesc: '战国诛死游戏', features: ['战国题材', '魂系战斗', '妖怪设定', '丰富武器'] },
             { id: 47, name: '卧龙：苍天陨落', category: '动作', rating: 4.6, steamId: 1448440, shortDesc: '三国暗黑动作', features: ['三国题材', '魂系战斗', '策略深度', '合作模式'] },
             { id: 48, name: '匹诺曹的谎言', category: '动作', rating: 4.7, steamId: 1627720, shortDesc: '暗黑童话魂系', features: ['暗黑童话', '魂系战斗', '精美画面', '剧情深刻'] },
             { id: 49, name: '遗迹2', category: '射击', rating: 4.7, steamId: 1282100, shortDesc: '射击肉鸽混搭', features: ['射击战斗', 'Roguelike', '多人合作', '丰富关卡'] },
             { id: 50, name: '地狱潜者2', category: '射击', rating: 4.8, steamId: 553850, shortDesc: '多人合作射击', features: ['多人合作', '射击战斗', '爽快战斗', '科幻题材'] },
-            { id: 51, name: '战锤40K暗潮', category: '射击', rating: 4.6, steamId: 1361210, shortDesc: '鼠疫精神续作', features: ['战锤40K', '四人合作', '射击战斗', '暗黑风格'] },
+            { id: 51, name: '战锤40K：暗潮', category: '射击', rating: 4.6, steamId: 1361210, shortDesc: '鼠疫精神续作', features: ['战锤40K', '四人合作', '射击战斗', '暗黑风格'] },
             { id: 52, name: '深岩银河', category: '射击', rating: 4.8, steamId: 548430, shortDesc: '矮人挖矿合作', features: ['四人合作', '挖矿探索', '射击战斗', '职业系统'] },
             { id: 53, name: '求生之路2', category: '射击', rating: 4.8, steamId: 550, shortDesc: '经典丧尸合作', features: ['丧尸题材', '四人合作', '射击战斗', '经典地图'] },
-            { id: 54, name: '杀戮空间2', category: '射击', rating: 4.6, steamId: 232090, shortDesc: '爽快丧尸射击', features: ['丧尸射击', '多人合作', '波次生存', '职业系统'] },
-            { id: 55, name: '僵尸部队4', category: '射击', rating: 4.6, steamId: 694280, shortDesc: '狙击丧尸纳粹', features: ['狙击射击', '丧尸题材', '四人合作', '血腥爽快'] },
-            { id: 56, name: '狙击精英5', category: '射击', rating: 4.6, steamId: 1029690, shortDesc: 'X光击杀镜头', features: ['狙击游戏', 'X光击杀', '二战题材', '潜行元素'] },
-            { id: 57, name: '杀手3', category: '动作', rating: 4.7, steamId: 1659040, shortDesc: '暗杀沙盒神作', features: ['暗杀游戏', '沙盒关卡', '多种方案', '剧情连贯'] },
-            { id: 58, name: '耻辱2', category: '动作', rating: 4.7, steamId: 403640, shortDesc: '沉浸模拟潜行', features: ['潜行暗杀', '超能力', '选择影响', '精美关卡'] },
-            { id: 59, name: '掠食', category: '射击', rating: 4.7, steamId: 480490, shortDesc: '太空恐怖沉浸', features: ['太空题材', '恐怖元素', 'RPG元素', '剧情深刻'] },
-            { id: 60, name: '死亡循环', category: '动作', rating: 4.7, steamId: 1252330, shortDesc: '时间循环创新', features: ['时间循环', '射击战斗', '独特玩法', '精美画面'] },
-            { id: 61, name: '红霞岛', category: '射击', rating: 4.3, steamId: 1294810, shortDesc: '开放世界合作', features: ['开放世界', '吸血鬼题材', '多人合作', '射击战斗'] },
-            { id: 62, name: '幽灵线东京', category: '动作', rating: 4.5, steamId: 1475810, shortDesc: '日式除灵动作', features: ['日式恐怖', '除灵题材', '动作战斗', '东京场景'] },
-            { id: 63, name: '恶灵附身2', category: '恐怖', rating: 4.6, steamId: 601430, shortDesc: '三上真司恐怖', features: ['生存恐怖', '三上真司', '心理恐怖', '战斗系统'] },
-            { id: 64, name: '逃生2', category: '恐怖', rating: 4.6, steamId: 414700, shortDesc: '第一人称跑酷', features: ['生存恐怖', '无战斗', '跑酷逃生', '恐怖氛围'] },
-            { id: 65, name: '港诡实录', category: '恐怖', rating: 4.5, steamId: 1178490, shortDesc: '中式恐怖经典', features: ['中式恐怖', '香港都市传说', '解谜元素', '沉浸式'] },
-            { id: 66, name: '纸人', category: '恐怖', rating: 4.5, steamId: 1042390, shortDesc: '清朝中式恐怖', features: ['清朝背景', '中式恐怖', '解谜探索', '恐怖氛围'] },
-            { id: 67, name: '烟火', category: '恐怖', rating: 4.7, steamId: 1024600, shortDesc: '横版中式恐怖', features: ['横版解谜', '中式恐怖', '剧情深刻', '像素风格'] },
-            { id: 68, name: '三伏', category: '恐怖', rating: 4.7, steamId: 1991790, shortDesc: '国产剧情神作', features: ['中式恐怖', '悬疑剧情', '解谜探索', '精美画面'] },
-            { id: 69, name: '戴森球计划', category: '策略', rating: 4.8, steamId: 1366540, shortDesc: '国产自动化神作', features: ['自动化建设', '太空题材', '资源管理', '国产精品'] },
-            { id: 70, name: '鬼谷八荒', category: 'RPG', rating: 4.6, steamId: 1468810, shortDesc: '修仙开放世界', features: ['修仙题材', '开放世界', '角色养成', '国产游戏'] },
-            { id: 71, name: '太吾绘卷', category: 'RPG', rating: 4.6, steamId: 838350, shortDesc: '国产武侠神作', features: ['武侠题材', '沙盒玩法', '独特机制', '国产精品'] },
-            { id: 72, name: '山河旅人', category: '冒险', rating: 4.7, steamId: 2024340, shortDesc: '国风叙事解谜', features: ['国风美术', '叙事解谜', '时间回溯', '情感体验'] },
-            { id: 73, name: '暗黑地牢2', category: '策略', rating: 4.7, steamId: 1940340, shortDesc: '压抑肉鸽探险', features: ['暗黑风格', 'Roguelike', '策略战斗', '压力系统'] },
-            { id: 74, name: '孤帆远航', category: '冒险', rating: 4.7, steamId: 1271100, shortDesc: '末日氛围神作', features: ['末日氛围', '探索冒险', '极简叙事', '精美画面'] },
-            { id: 75, name: '格里姆黎明', category: 'RPG', rating: 4.7, steamId: 219990, shortDesc: '暗黑类ARPG', features: ['暗黑风格', 'ARPG', '职业组合', '刷宝玩法'] },
-            { id: 76, name: '恐怖黎明', category: 'RPG', rating: 4.7, steamId: 219990, shortDesc: '刷刷刷暗黑风', features: ['暗黑风格', 'ARPG', '丰富装备', '刷宝体验'] },
-            { id: 77, name: '最后纪元', category: 'RPG', rating: 4.7, steamId: 899770, shortDesc: '时空穿越刷宝', features: ['ARPG', '时空题材', '技能系统', '刷宝玩法'] },
-            { id: 78, name: '破坏领主', category: 'RPG', rating: 4.5, steamId: 78710, shortDesc: '画面优秀暗黑', features: ['暗黑风格', 'ARPG', '精美画面', '战斗系统'] },
-            { id: 79, name: '维克多弗兰', category: 'RPG', rating: 4.5, steamId: 345180, shortDesc: '爽快俯视射击', features: ['俯视射击', 'ARPG', '武器组合', '爽快战斗'] },
-            { id: 80, name: '火炬之光2', category: 'RPG', rating: 4.7, steamId: 200710, shortDesc: '经典卡通暗黑', features: ['卡通风格', 'ARPG', '多人联机', '刷宝玩法'] },
-            { id: 81, name: '战锤末世鼠疫2', category: '动作', rating: 4.7, steamId: 552500, shortDesc: '四人合作割草', features: ['战锤题材', '四人合作', '割草战斗', '职业系统'] },
-            { id: 82, name: '骑士精神2', category: '动作', rating: 4.6, steamId: 1341370, shortDesc: '中世纪砍杀', features: ['中世纪', '多人对战', '冷兵器', '大规模战斗'] },
-            { id: 83, name: '雷霆一击', category: '动作', rating: 4.6, steamId: 866360, shortDesc: '硬核中世纪', features: ['硬核战斗', '中世纪', '冷兵器', '策略元素'] },
-            { id: 84, name: '叛乱：沙尘暴', category: '射击', rating: 4.7, steamId: 581320, shortDesc: '硬核拟真射击', features: ['拟真射击', '战术团队', '硬核难度', '中东题材'] },
-            { id: 85, name: '人间地狱', category: '射击', rating: 4.7, steamId: 686160, shortDesc: '二战硬核战术', features: ['二战题材', '硬核射击', '团队战术', '大规模战斗'] },
-            { id: 86, name: '风之旅人', category: '冒险', rating: 4.8, steamId: 638230, shortDesc: '唯美治愈神作', features: ['唯美画面', '治愈体验', '多人相遇', '音乐优秀'] },
-            { id: 87, name: '光之子', category: 'RPG', rating: 4.7, steamId: 256290, shortDesc: '童话手绘回合', features: ['手绘美术', '童话题材', '回合制', '音乐精美'] },
-            { id: 88, name: '奥日与迷失森林', category: '平台', rating: 4.8, steamId: 261570, shortDesc: '手绘音乐神作', features: ['手绘美术', '平台跳跃', '音乐优秀', '情感故事'] },
-            { id: 89, name: '奥日与精灵意志', category: '平台', rating: 4.8, steamId: 1057090, shortDesc: '续作全面进化', features: ['平台跳跃', '战斗系统', '精美画面', '音乐优秀'] },
-            { id: 90, name: '精灵与萤火意志', category: '平台', rating: 4.8, steamId: 1057090, shortDesc: '绝美银河城', features: ['银河城', '精美画面', '战斗系统', '探索元素'] },
-            { id: 91, name: '咖啡心语', category: '模拟', rating: 4.7, steamId: 914800, shortDesc: '赛博朋克咖啡', features: ['经营模拟', '赛博朋克', '叙事体验', '轻松休闲'] },
-            { id: 92, name: '赛博朋克酒保', category: '模拟', rating: 4.7, steamId: 914800, shortDesc: '调酒叙事游戏', features: ['调酒模拟', '叙事体验', '角色互动', '独特设定'] },
-            { id: 93, name: '奇异园艺', category: '解谜', rating: 4.7, steamId: 1124080, shortDesc: '超自然解谜', features: ['解谜探索', '超自然元素', '收集系统', '剧情驱动'] },
-            { id: 94, name: '奥伯拉丁回归', category: '解谜', rating: 4.8, steamId: 503420, shortDesc: '推理神作', features: ['推理解谜', '独特画风', '剧情深刻', '侦探玩法'] },
-            { id: 95, name: '证人', category: '解谜', rating: 4.7, steamId: 210970, shortDesc: '开放世界解谜', features: ['开放世界', '解谜探索', '视觉谜题', '精美画面'] },
-            { id: 96, name: '画中世界', category: '解谜', rating: 4.8, steamId: 490770, shortDesc: '创意拼图解谜', features: ['拼图玩法', '创意解谜', '精美美术', '独特体验'] },
-            { id: 97, name: '接龙', category: '休闲', rating: 4.6, steamId: 1593500, shortDesc: '轻松扑克接龙', features: ['休闲益智', '扑克游戏', '轻松上手', '打发时间'] },
-            { id: 98, name: '潜水员戴夫DLC', category: '休闲', rating: 4.9, steamId: 1868140, shortDesc: '免费内容更新', features: ['免费DLC', '新内容', '海洋探险', '持续更新'] },
-            { id: 99, name: '吸血鬼崛起', category: '生存', rating: 4.7, steamId: 1604030, shortDesc: '吸血鬼生存建设', features: ['吸血鬼题材', '生存建造', '多人合作', '开放世界'] },
-            { id: 100, name: '夜族崛起', category: '生存', rating: 4.7, steamId: 1604030, shortDesc: '吸血鬼动作RPG', features: ['吸血鬼题材', '动作战斗', '生存建造', '开放世界'] }
+            { id: 54, name: '光环：士官长合集', category: '射击', rating: 4.8, steamId: 976730, shortDesc: 'FPS传奇回归', features: ['科幻射击', '战役模式', '多人联机', '经典IP'] },
+            { id: 55, name: '逃离塔科夫', category: '射击', rating: 4.6, steamId: 1145350, shortDesc: '硬核射击生存', features: ['硬核射击', 'PVPVE', '搜宝撤离', '高真实度'] },
+            { id: 56, name: '叛乱：沙暴', category: '射击', rating: 4.7, steamId: 581360, shortDesc: '现代战术射击', features: ['战术射击', '多人对战', '军事题材', '真实弹道'] },
+            { id: 57, name: '猎杀对决', category: '射击', rating: 4.7, steamId: 6502, shortDesc: '西部PVP猎魔', features: ['西部题材', 'PVPVE', '狩猎玩法', '高难度'] },
+            { id: 58, name: '瓦罗兰特', category: '射击', rating: 4.6, steamId: 1252330, shortDesc: '战术射击爆款', features: ['5V5竞技', '技能系统', '战术射击', '免费游玩'] },
+            { id: 59, name: 'Apex英雄', category: '射击', rating: 4.7, steamId: 1172470, shortDesc: '吃鸡射击大作', features: ['吃鸡玩法', '英雄技能', '3A画质', '免费游玩'] },
+            { id: 60, name: '逃离塔科夫', category: '射击', rating: 4.5, steamId: 769500, shortDesc: '硬核生存射击', features: ['硬核射击', 'PVPVE', '装备收集', '高自由'] },
+            { id: 61, name: 's.T.A.L.K.E.R. 2', category: '恐怖', rating: 4.6, steamId: 1643320, shortDesc: '辐射风科幻恐怖', features: ['恐怖探索', '开放世界', '科幻题材', '高难度'] },
+            { id: 62, name: '失忆症：黑暗后裔', category: '恐怖', rating: 4.7, steamId: 57300, shortDesc: '沉浸式恐怖', features: ['心理恐怖', '氛围营造', '第一人称', '剧情驱动'] },
+            { id: 63, name: '逃生2', category: '恐怖', rating: 4.7, steamId: 414700, shortDesc: '宗教恐怖巅峰', features: ['恐怖氛围', '第一人称', '宗教题材', '高难度'] },
+            { id: 64, name: '黑相集：灰界', category: '恐怖', rating: 4.5, steamId: 1280370, shortDesc: '交互式恐怖电影', features: ['交互式电影', '恐怖剧情', '多结局', '双人合作'] },
+            { id: 65, name: '零：希望之票', category: '恐怖', rating: 4.6, steamId: 2139760, shortDesc: '和风恐怖经典', features: ['和风恐怖', '拍照系统', '心理恐惧', '剧情深刻'] },
+            { id: 66, name: '七日杀', category: '生存', rating: 4.5, steamId: 264200, shortDesc: '僵尸生存建造', features: ['僵尸生存', '开放世界', '建造系统', '多人合作'] },
+            { id: 67, name: '绿色地狱', category: '生存', rating: 4.6, steamId: 815370, shortDesc: '亚马逊丛林生存', features: ['丛林生存', '真实求生', '建造系统', '单人剧情'] },
+            { id: 68, name: '北港', category: '生存', rating: 4.5, steamId: 687260, shortDesc: '极寒荒野生存', features: ['极寒生存', '开放世界', '建造系统', '恐怖元素'] },
+            { id: 69, name: '漫威蜘蛛侠', category: '动作', rating: 4.8, steamId: 1496790, shortDesc: '蜘蛛侠开放世界', features: ['开放世界', '蛛丝摆荡', '超级英雄', '战斗爽快'] },
+            { id: 70, name: '蝙蝠侠：阿卡姆骑士', category: '动作', rating: 4.8, steamId: 208650, shortDesc: '超级英雄巅峰', features: ['超级英雄', '潜行战斗', '开放世界', '打击感强'] },
+            { id: 71, name: '古墓丽影：崛起', category: '动作', rating: 4.7, steamId: 311260, shortDesc: '劳拉冒险经典', features: ['冒险探索', '解谜元素', '动作战斗', '精美画面'] },
+            { id: 72, name: '神秘海域4', category: '动作', rating: 4.8, steamId: 479170, shortDesc: '盗贼同盟巅峰', features: ['冒险剧情', '射击战斗', '攀爬探索', '电影体验'] },
+            { id: 73, name: '对马岛之魂', category: '动作', rating: 4.8, steamId: 1239810, shortDesc: '武士动作巅峰', features: ['武士战斗', '开放世界', '精美画面', '日本文化'] },
+            { id: 74, name: '地平线：零之曙光', category: '动作', rating: 4.7, steamId: 1151640, shortDesc: '机械恐龙世界', features: ['开放世界', '科幻背景', '战斗系统', '精美画面'] },
+            { id: 75, name: '死亡搁浅', category: '动作', rating: 4.7, steamId: 1190460, shortDesc: '送快递模拟器', features: ['独特玩法', '剧情驱动', '连接系统', '步行模拟'] },
+            { id: 76, name: '死亡空间：重制版', category: '恐怖', rating: 4.8, steamId: 1693980, shortDesc: '科幻恐怖经典', features: ['科幻恐怖', '射击战斗', '经典重制', '氛围营造'] },
+            { id: 77, name: '木卫四协议', category: '恐怖', rating: 4.5, steamId: 1540310, shortDesc: '太空站恐怖', features: ['太空恐怖', '动作战斗', '第一人称', '科幻题材'] },
+            { id: 78, name: '尸变纪元', category: '策略', rating: 4.5, steamId: 644560, shortDesc: '回合制生存策略', features: ['回合制战斗', '生存建造', 'Roguelike', '僵尸题材'] },
+            { id: 79, name: '幽浮2', category: '策略', rating: 4.8, steamId: 257420, shortDesc: '回合制战术经典', features: ['回合制战术', '科幻题材', '永久死亡', '高难度'] },
+            { id: 80, name: '陷阵之志', category: '策略', rating: 4.8, steamId: 590380, shortDesc: '机甲回合制策略', features: ['回合制策略', 'Roguelike', '机甲战斗', '烧脑深度'] },
+            { id: 81, name: '旗帜的传说', category: '策略', rating: 4.7, steamId: 237630, shortDesc: '北欧风战术RPG', features: ['回合制战术', '北欧题材', '剧情驱动', '精美画风'] },
+            { id: 82, name: ' Into the Breach', category: '策略', rating: 4.8, steamId: 590380, shortDesc: '像素回合制策略', features: ['回合制策略', 'Roguelike', '机甲战斗', '烧脑有趣'] },
+            { id: 83, name: '星之海', category: 'RPG', rating: 4.7, steamId: 1245960, shortDesc: '像素JRPG佳作', features: ['像素画风', '回合制战斗', '复古风格', '剧情有趣'] },
+            { id: 84, name: '八方旅人2', category: 'RPG', rating: 4.7, steamId: 1971650, shortDesc: '像素JRPG神作', features: ['像素画风', '回合制战斗', '八人故事', '高自由度'] },
+            { id: 85, name: '三角战略', category: '策略', rating: 4.6, steamId: 1611870, shortDesc: 'HD-2D策略RPG', features: ['策略战斗', 'HD-2D画风', '剧情分支', '战棋玩法'] },
+            { id: 86, name: '失落的余烬', category: '独立', rating: 4.6, steamId: 1203710, shortDesc: '横版独立神作', features: ['横版过关', '精美画风', '剧情深刻', '音乐优秀'] },
+            { id: 87, name: '奥日与精灵意志', category: '动作', rating: 4.8, steamId: 1056900, shortDesc: '银河恶魔城佳作', features: ['银河城', '精美画风', '平台跳跃', '音乐动人'] },
+            { id: 88, name: '死亡之门', category: '独立', rating: 4.7, steamId: 1379170, shortDesc: '独立游戏佳作', features: ['俯视角动作', '解谜元素', '精美画风', '剧情深刻'] },
+            { id: 89, name: '武士零', category: '独立', rating: 4.8, steamId: 2342700, shortDesc: '赛博朋克动作', features: ['俯视角动作', '一击必杀', '赛博朋克', '节奏感强'] },
+            { id: 90, name: '林中小女巫', category: '独立', rating: 4.6, steamId: 1746030, shortDesc: '可爱独立游戏', features: ['可爱画风', '冒险解谜', '收集要素', '轻松有趣'] },
+            { id: 91, name: '渔帆暗涌', category: '独立', rating: 4.7, steamId: 1465840, shortDesc: '航海探索独立', features: ['航海探索', '恐怖元素', '收集系统', '独特画风'] },
+            { id: 92, name: '霓虹深渊', category: '独立', rating: 4.6, steamId: 1293810, shortDesc: '赛博朋克肉鸽', features: ['Roguelike', '赛博朋克', '道具丰富', '垂直弹幕'] },
+            { id: 93, name: 'Hades', category: '独立', rating: 4.9, steamId: 1145360, shortDesc: '暗黑地牢肉鸽', features: ['Roguelike', '俯视角动作', '希腊神话', '高可玩性'] },
+            { id: 94, name: '黑帝斯2', category: '独立', rating: 4.8, steamId: 1147560, shortDesc: '肉鸽续作神作', features: ['Roguelike', '动作战斗', '希腊神话', '深度剧情'] },
+            { id: 95, name: '黎明前20分钟', category: '独立', rating: 4.6, steamId: 1976910, shortDesc: 'Roguelike射击', features: ['Roguelike', '射击战斗', '肉鸽构筑', '短时高娱'] },
+            { id: 96, name: '土豆兄弟', category: '独立', rating: 4.7, steamId: 1942280, shortDesc: '肉鸽射击休闲', features: ['Roguelike', '射击战斗', '休闲有趣', '短时游戏'] },
+            { id: 97, name: '飞艇：疾风', category: '竞速', rating: 4.5, steamId: 1578500, shortDesc: '飞行竞速游戏', features: ['飞行竞速', '多人对战', '爽快刺激', '独特玩法'] },
+            { id: 98, name: 'F1 2023', category: '竞速', rating: 4.7, steamId: 2145430, shortDesc: 'F1赛车年货', features: ['赛车竞速', 'F1授权', '策略经营', '真实驾驶'] },
+            { id: 99, name: '神力科莎', category: '模拟', rating: 4.7, steamId: 17390, shortDesc: '硬核赛车模拟', features: ['赛车模拟', '真实驾驶', '改装系统', '高难度'] },
+            { id: 100, name: '微软模拟飞行', category: '模拟', rating: 4.8, steamId: 1250410, shortDesc: '飞行模拟巅峰', features: ['飞行模拟', '全球地图', '真实体验', '高画质'] }
         ];
 
-        // DOM Elements
+        // ===== 全局变量 =====
+        let currentFilter = 'all';
+        let currentSort = 'rating';
+        let currentSearch = '';
+        let currentLightboxIndex = 0;
+        let currentGameImages = [];
+
+        // ===== DOM 元素 =====
         const gamesGrid = document.getElementById('gamesGrid');
         const searchInput = document.getElementById('searchInput');
         const sortSelect = document.getElementById('sortSelect');
         const filterButtons = document.querySelectorAll('.filter-btn');
         const resultsCount = document.getElementById('resultsCount');
         const gameModal = document.getElementById('gameModal');
-        const closeModal = document.getElementById('closeModal');
+        const lightbox = document.getElementById('lightbox');
+        const aboutModal = document.getElementById('aboutModal');
+        const backToTop = document.getElementById('backToTop');
+        const progressBar = document.getElementById('progressBar');
+        const toast = document.getElementById('toast');
+        const commentList = document.getElementById('commentList');
+        const commentCount = document.getElementById('commentCount');
 
-        // State
-        let currentFilter = 'all';
-        let currentSearch = '';
-        let currentSort = 'rating';
+        // ===== LocalStorage Keys =====
+        const LIKES_KEY = 'gameLikes';
+        const COMMENTS_KEY = 'gameComments';
 
-        // Get image URL
-        function getGameImageUrl(steamId) {
-            return `https://images.weserv.nl/?url=steamcdn-a.akamaihd.net/steam/apps/${steamId}/header.jpg`;
+        // ===== 获取 Steam 图片URL（优先使用官方原图）=====
+        function getSteamImage(steamId) {
+            return `https://steamcdn-a.akamaihd.net/steam/apps/${steamId}/header.jpg`;
         }
 
-        // Load likes from localStorage
+        // ===== 游戏类型配置（颜色和图标）=====
+        const categoryConfig = {
+            'RPG': { gradient: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)', icon: 'fa-dragon', label: 'RPG' },
+            '动作': { gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', icon: 'fa-sword', label: '动作' },
+            '独立': { gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', icon: 'fa-code', label: '独立' },
+            '休闲': { gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', icon: 'fa-gamepad', label: '休闲' },
+            '策略': { gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', icon: 'fa-chess', label: '策略' },
+            '生存': { gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', icon: 'fa-tree-pine', label: '生存' },
+            '竞速': { gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', icon: 'fa-car', label: '竞速' },
+            '恐怖': { gradient: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)', icon: 'fa-skull', label: '恐怖' },
+            '模拟': { gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)', icon: 'fa-building', label: '模拟' },
+            '射击': { gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', icon: 'fa-gun', label: '射击' },
+            'all': { gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', icon: 'fa-gamepad', label: '游戏' }
+        };
+
+        // ===== 图片加载失败处理（根据类型显示不同颜色和图标）=====
+        function handleImageError(img, gameName, category) {
+            const config = categoryConfig[category] || categoryConfig['all'];
+            const displayText = gameName.length > 2 ? gameName.substring(0, 2) : gameName;
+            
+            img.style.display = 'none';
+            const wrapper = img.parentElement;
+            wrapper.style.background = config.gradient;
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'center';
+            wrapper.style.gap = '8px';
+            
+            const icon = document.createElement('i');
+            icon.className = `fa-solid ${config.icon} text-white text-4xl opacity-80`;
+            wrapper.appendChild(icon);
+            
+            const placeholder = document.createElement('span');
+            placeholder.className = 'text-white text-xl font-bold';
+            placeholder.textContent = displayText;
+            wrapper.appendChild(placeholder);
+        }
+
+        // ===== Toast 提示 =====
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            toast.style.animation = 'none';
+            setTimeout(() => {
+                toast.style.animation = 'toastFade 2.5s ease-out forwards';
+            }, 10);
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2500);
+        }
+
+        // ===== 点赞功能 =====
         function getLikes() {
-            const likes = localStorage.getItem('gameLikes');
-            return likes ? JSON.parse(likes) : {};
+            const stored = localStorage.getItem(LIKES_KEY);
+            return stored ? JSON.parse(stored) : {};
         }
 
-        // Save likes to localStorage
         function saveLikes(likes) {
-            localStorage.setItem('gameLikes', JSON.stringify(likes));
+            localStorage.setItem(LIKES_KEY, JSON.stringify(likes));
         }
 
-        // Toggle like
-        function toggleLike(gameId, button) {
+        function toggleLike(gameId, btn) {
             const likes = getLikes();
             if (likes[gameId]) {
-                likes[gameId]++;
+                likes[gameId]--;
+                btn.classList.remove('liked');
             } else {
                 likes[gameId] = 1;
+                btn.classList.add('liked');
             }
             saveLikes(likes);
-            
-            const likeIcon = button.querySelector('.like-icon');
-            likeIcon.classList.add('like-animation');
-            setTimeout(() => likeIcon.classList.remove('like-animation'), 300);
-            
-            updateLikeButton(button, likes[gameId]);
+            updateLikeDisplay(gameId, btn);
+            btn.classList.add('like-animation');
+            setTimeout(() => btn.classList.remove('like-animation'), 300);
         }
 
-        // Update like button
-        function updateLikeButton(button, count) {
-            button.querySelector('.like-count').textContent = count;
-            button.classList.add('bg-red-500');
-            button.classList.remove('bg-white/10');
+        function updateLikeDisplay(gameId, btn) {
+            const likes = getLikes();
+            const count = likes[gameId] || 0;
+            btn.querySelector('span').textContent = count;
         }
 
-        // Create game card
+        // ===== 留言板功能 =====
+        function getComments() {
+            const stored = localStorage.getItem(COMMENTS_KEY);
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveComments(comments) {
+            localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
+        }
+
+        function addComment(name, content) {
+            const comments = getComments();
+            const comment = {
+                id: Date.now(),
+                name: name.trim() || '匿名用户',
+                content: content.trim(),
+                time: new Date().toLocaleString('zh-CN')
+            };
+            comments.unshift(comment);
+            saveComments(comments);
+            renderComments();
+        }
+
+        function deleteComment(id) {
+            const comments = getComments().filter(c => c.id !== id);
+            saveComments(comments);
+            renderComments();
+        }
+
+        function renderComments() {
+            const comments = getComments();
+            commentCount.textContent = `${comments.length} 条留言`;
+            
+            if (comments.length === 0) {
+                commentList.innerHTML = '<p class="text-gray-500 text-center py-8">暂无留言，快来抢沙发吧！</p>';
+                return;
+            }
+
+            commentList.innerHTML = comments.map(comment => `
+                <div class="comment-card bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                                ${comment.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <span class="text-white font-medium">${comment.name}</span>
+                                <span class="text-gray-500 text-xs ml-2">${comment.time}</span>
+                            </div>
+                        </div>
+                        <button onclick="deleteComment(${comment.id})" class="text-gray-500 hover:text-red-400 transition-colors p-2">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <p class="text-gray-300 pl-13">${comment.content}</p>
+                </div>
+            `).join('');
+        }
+
+        // ===== 创建游戏卡片 =====
         function createGameCard(game) {
             const likes = getLikes();
+            const likeCount = likes[game.id] || 0;
+            const isLiked = likeCount > 0;
+
             const card = document.createElement('div');
-            card.className = 'game-card bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md rounded-xl overflow-hidden border border-white/10 card-hidden';
+            card.className = 'game-card card-hidden bg-white/5 backdrop-blur-md rounded-2xl overflow-hidden border border-white/10';
             card.innerHTML = `
-                <div class="relative h-48 overflow-hidden">
+                <div class="game-image-wrapper relative" onclick="openLightbox(${game.id})">
                     <img 
-                        src="${getGameImageUrl(game.steamId)}" 
-                        alt="${game.name}" 
-                        class="game-image w-full h-full object-cover"
-                        onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-image').style.display='flex';"
+                        data-src="${getSteamImage(game.steamId)}" 
+                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400x150'%3E%3Crect fill='%23374151' width='400' height='150'/%3E%3C/svg%3E"
+                        alt="${game.name}"
+                        class="game-image lazy-image w-full h-48 object-cover"
+                        loading="lazy"
+                        onerror="handleImageError(this, '${game.name}', '${game.category}')"
                     />
-                    <div class="fallback-image hidden absolute inset-0 bg-gradient-to-br from-purple-600 to-gray-700 flex items-center justify-center">
-                        <span class="text-white text-2xl font-bold text-center px-2">${game.name}</span>
-                    </div>
-                    <div class="image-overlay absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0"></div>
-                    <span class="absolute top-3 left-3 px-2 py-1 bg-purple-600 rounded text-xs text-white font-medium">${game.category}</span>
-                    <div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-black/60 rounded-full">
-                        <i class="fa-solid fa-star text-yellow-400 text-xs"></i>
-                        <span class="text-white text-xs font-medium">${game.rating}</span>
+                    <div class="image-overlay absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass-plus text-white text-3xl"></i>
                     </div>
                 </div>
                 <div class="p-4">
-                    <h3 class="text-white font-semibold mb-2 truncate">${game.name}</h3>
-                    <p class="text-gray-400 text-sm mb-4 line-clamp-2">${game.shortDesc}</p>
-                    <button 
-                        class="like-btn flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
-                        onclick="toggleLike(${game.id}, this)"
-                    >
-                        <i class="fa-solid fa-heart like-icon"></i>
-                        <span class="like-count">${likes[game.id] || 0}</span>
-                    </button>
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="text-white font-bold text-lg truncate flex-1">${game.name}</h3>
+                        <span class="px-2 py-1 bg-purple-600/50 text-purple-300 rounded text-xs whitespace-nowrap ml-2">${game.category}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-3">${game.shortDesc}</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1 text-yellow-400">
+                            <i class="fa-solid fa-star text-xs"></i>
+                            <span class="text-sm font-medium">${game.rating}</span>
+                        </div>
+                        <button 
+                            class="like-btn ${isLiked ? 'liked' : ''} px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm flex items-center gap-1.5 transition-colors"
+                            onclick="toggleLike(${game.id}, this)"
+                        >
+                            <i class="fa-${isLiked ? 'solid' : 'regular'} fa-heart ${isLiked ? 'text-red-400' : ''}"></i>
+                            <span>${likeCount}</span>
+                        </button>
+                    </div>
                 </div>
             `;
-            
-            // Open modal on card click
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('.like-btn')) {
-                    openModal(game);
+            card.onclick = (e) => {
+                if (!e.target.closest('.like-btn') && !e.target.closest('.game-image-wrapper')) {
+                    openGameModal(game);
                 }
-            });
-
-            // Initialize like button state
-            const likeBtn = card.querySelector('.like-btn');
-            if (likes[game.id]) {
-                updateLikeButton(likeBtn, likes[game.id]);
-            }
-
+            };
             return card;
         }
 
-        // Open modal
-        function openModal(game) {
-            document.getElementById('modalImage').src = getGameImageUrl(game.steamId);
-            document.getElementById('modalTitle').textContent = game.name;
-            document.getElementById('modalCategory').textContent = game.category;
-            document.getElementById('modalRating').textContent = game.rating;
-            document.getElementById('modalDescription').textContent = game.shortDesc;
-            
-            const featuresList = document.getElementById('modalFeatures');
-            featuresList.innerHTML = '';
-            game.features.forEach(feature => {
-                const li = document.createElement('li');
-                li.innerHTML = `<i class="fa-solid fa-check text-purple-400 mr-2"></i>${feature}`;
-                featuresList.appendChild(li);
-            });
-            
-            gameModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close modal
-        closeModal.addEventListener('click', () => {
-            gameModal.classList.add('hidden');
-            document.body.style.overflow = '';
-        });
-
-        // Close modal on overlay click
-        gameModal.addEventListener('click', (e) => {
-            if (e.target === gameModal) {
-                gameModal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-        });
-
-        // Filter and sort games
+        // ===== 筛选和排序 =====
         function filterAndSortGames() {
-            let filtered = [...gamesData];
-            
-            // Search filter
-            if (currentSearch) {
-                const searchLower = currentSearch.toLowerCase();
-                filtered = filtered.filter(game => game.name.toLowerCase().includes(searchLower));
-            }
-            
-            // Category filter
-            if (currentFilter !== 'all') {
-                filtered = filtered.filter(game => game.category === currentFilter);
-            }
-            
-            // Sort
+            let filtered = gamesData.filter(game => {
+                const matchFilter = currentFilter === 'all' || game.category === currentFilter;
+                const matchSearch = game.name.toLowerCase().includes(currentSearch.toLowerCase());
+                return matchFilter && matchSearch;
+            });
+
             if (currentSort === 'rating') {
                 filtered.sort((a, b) => b.rating - a.rating);
-            } else {
-                filtered.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (currentSort === 'name') {
+                filtered.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
             }
-            
+
             return filtered;
         }
 
-        // Render games
+        // ===== 渲染游戏列表 =====
         function renderGames() {
             const filteredGames = filterAndSortGames();
             resultsCount.textContent = `共 ${filteredGames.length} 款游戏`;
-            
-            // Clear grid
             gamesGrid.innerHTML = '';
-            
-            // Add cards with animation delay
+
             filteredGames.forEach((game, index) => {
                 const card = createGameCard(game);
                 card.style.animationDelay = `${index * 50}ms`;
@@ -518,9 +768,119 @@
                 }, index * 50);
                 gamesGrid.appendChild(card);
             });
+
+            // 懒加载：使用 Intersection Observer
+            observeImages();
         }
 
-        // Event listeners
+        // ===== 图片懒加载 (Intersection Observer) =====
+        function observeImages() {
+            const images = document.querySelectorAll('.lazy-image[data-src]');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        observer.unobserve(img);
+                    }
+                });
+            }, { rootMargin: '100px' });
+            images.forEach(img => observer.observe(img));
+        }
+
+        // ===== 游戏详情模态框 =====
+        function openGameModal(game) {
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = getSteamImage(game.steamId);
+            modalImage.style.display = 'block';
+            modalImage.onerror = () => {
+                modalImage.style.display = 'none';
+                const wrapper = modalImage.parentElement;
+                wrapper.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            };
+            document.getElementById('modalTitle').textContent = game.name;
+            document.getElementById('modalCategory').textContent = game.category;
+            document.getElementById('modalRating').textContent = game.rating;
+            document.getElementById('modalDescription').textContent = game.shortDesc;
+            document.getElementById('modalFeatures').innerHTML = game.features.map(f => 
+                `<li class="flex items-center gap-2"><i class="fa-solid fa-check text-purple-400"></i>${f}</li>`
+            ).join('');
+            gameModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeGameModal() {
+            gameModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // ===== Lightbox 功能 =====
+        function openLightbox(gameId) {
+            const game = gamesData.find(g => g.id === gameId);
+            if (!game) return;
+            currentGameImages = [getSteamImage(game.steamId)];
+            currentLightboxIndex = 0;
+            updateLightboxImage();
+            lightbox.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function updateLightboxImage() {
+            const lightboxImage = document.getElementById('lightboxImage');
+            lightboxImage.src = currentGameImages[currentLightboxIndex];
+            lightboxImage.style.display = 'block';
+            lightboxImage.onerror = () => {
+                lightboxImage.style.display = 'none';
+            };
+            document.getElementById('imageCounter').textContent = `${currentLightboxIndex + 1} / ${currentGameImages.length}`;
+        }
+
+        function closeLightbox() {
+            lightbox.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function prevImage() {
+            currentLightboxIndex = (currentLightboxIndex - 1 + currentGameImages.length) % currentGameImages.length;
+            updateLightboxImage();
+        }
+
+        function nextImage() {
+            currentLightboxIndex = (currentLightboxIndex + 1) % currentGameImages.length;
+            updateLightboxImage();
+        }
+
+        // ===== 分享功能 =====
+        function sharePage() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('链接已复制到剪贴板！');
+            }).catch(() => {
+                showToast('复制失败，请手动复制');
+            });
+        }
+
+        // ===== 返回顶部 =====
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ===== 滚动事件处理 =====
+        function handleScroll() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            if (scrollTop > 300) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+        }
+
+        // ===== 事件监听器 =====
         searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value;
             renderGames();
@@ -533,25 +893,79 @@
 
         filterButtons.forEach(btn => {
             btn.addEventListener('click', () => {
-                // Update active state
-                filterButtons.forEach(b => b.classList.remove('bg-purple-600', 'active'));
+                filterButtons.forEach(b => {
+                    b.classList.remove('bg-purple-600', 'active');
+                    b.classList.add('bg-white/10');
+                });
                 btn.classList.add('bg-purple-600', 'active');
-                
+                btn.classList.remove('bg-white/10');
                 currentFilter = btn.dataset.filter;
                 renderGames();
             });
         });
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !gameModal.classList.contains('hidden')) {
-                gameModal.classList.add('hidden');
+        document.getElementById('closeModal').addEventListener('click', closeGameModal);
+        gameModal.addEventListener('click', (e) => {
+            if (e.target === gameModal) closeGameModal();
+        });
+
+        document.getElementById('closeLightbox').addEventListener('click', closeLightbox);
+        document.getElementById('prevImage').addEventListener('click', prevImage);
+        document.getElementById('nextImage').addEventListener('click', nextImage);
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+
+        document.getElementById('shareBtn').addEventListener('click', sharePage);
+        document.getElementById('aboutBtn').addEventListener('click', () => {
+            aboutModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+        document.getElementById('closeAbout').addEventListener('click', () => {
+            aboutModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        });
+        aboutModal.addEventListener('click', (e) => {
+            if (e.target === aboutModal) {
+                aboutModal.classList.add('hidden');
                 document.body.style.overflow = '';
             }
         });
 
-        // Initial render
+        backToTop.addEventListener('click', scrollToTop);
+
+        document.getElementById('submitComment').addEventListener('click', () => {
+            const name = document.getElementById('commentName').value;
+            const content = document.getElementById('commentContent').value;
+            if (!content.trim()) {
+                showToast('请输入留言内容');
+                return;
+            }
+            addComment(name, content);
+            document.getElementById('commentContent').value = '';
+            showToast('留言发布成功！');
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (!lightbox.classList.contains('hidden')) closeLightbox();
+                else if (!gameModal.classList.contains('hidden')) closeGameModal();
+                else if (!aboutModal.classList.contains('hidden')) {
+                    aboutModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            }
+            if (!lightbox.classList.contains('hidden')) {
+                if (e.key === 'ArrowLeft') prevImage();
+                if (e.key === 'ArrowRight') nextImage();
+            }
+        });
+
+        window.addEventListener('scroll', handleScroll);
+
+        // ===== 初始化 =====
         renderGames();
+        renderComments();
     </script>
 </body>
 </html>
